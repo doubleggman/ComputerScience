@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网络安全实战测试题</title>
+  
+  <!-- 引入 Tailwind CSS 引擎 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 引入 React 和 ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- 引入 Babel 以在浏览器中编译 JSX -->
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    /* 隐藏滚动条但保留滚动功能，让界面更清爽 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden">
+  
+  <div id="root" class="h-full"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- 内置 SVG 图标组件，无需外部依赖 ---
+    const IconMenu = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>;
+    const IconX = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+    const IconBarChart = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
+    const IconCheckCircle = ({className}) => <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+    const IconXCircle = ({className}) => <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
+    const IconHelpCircle = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+    const IconChevronLeft = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>;
+    const IconChevronRight = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>;
+
+    // 注意：这里的 <\/script> 都是为了防止 HTML 解析器报错和误执行弹窗（防自伤 XSS）
+    const questionsData = [
+      // --- 1. 概述 ---
+      { c: "1. 概述", t: "简答", q: "什么原因导致了网络信息安全威胁的产生?", a: "（1）协议缺陷：TCP/IP协议簇是目前使用最为广泛的网络互联协议，但协议簇本身存在着一些安全缺陷。\n（2）软件漏洞：在操作系统和应用系统中，所有软件都有可能存在漏洞。\n（3）策略弱点：如果安全策略在设计时考虑不周，或实现时对安全机制选择不当。安全需求和应用需求相矛盾时，用户更愿意选择在安全策略方面做出妥协。\n（4）硬件漏洞：CPU、BIOS等硬件设备中，也会出现漏洞。危害严重，影响范围大，且难修复。\n（5）人为因素。一方面攻击者的成分复杂，多数掌握着丰富的攻击资源。另一方面防御者则缺乏专业人才，信息系统管理人员的人性弱点或者不合理操作，普通用户安全意识淡薄。", e: "此题目没有标准答案，答出基本要点即可。" },
+      { c: "1. 概述", t: "简答", q: "有人说只要我有足够多的钱，就可以采购到自己想要的安全设备来保障本单位的网络安全不受攻击。你是否同意这一说法，为什么?", a: "这种说的不正确。虽然充足的资金是网络安全建设的重要基础，但仅靠采购高端安全设备并不能绝对保证网络安全。\n分析：\n1、设备本身存在局限性。\n（1）即使是最先进的安全设备，也难以应对所有未知的新型网络攻击。黑客不断开发新的攻击手段和技术，而安全设备的更新往往具有滞后性。\n（2）安全设备主要聚焦于网络层面的防护，难以全面应对非技术手段的攻击。可能利用社交工程手段诱使员工泄露敏感信息。\n2、网络安全是体系化工程。\n（1）人员因素至关重要：人是网络安全的第一道防线，也是最薄弱的环节。无论投入多少资金，若员工缺乏安全意识，攻击者仍可通过社会工程学突破。同时需要专业运维人员。\n（2）安全策略和制度不可或缺：有效的防护需要完善的策略和制度支撑，与设备配合形成完整体系。", e: "此题目没有标准答案，答出基本要点即可得分。" },
+      { c: "1. 概述", t: "单选", q: "安全属性“CIA”不包括( )。", o: ["A、完整性", "B、机密性", "C、可用性", "D、可控性"], a: "D", e: "CIA指的是机密性(Confidentiality)、完整性(Integrity)、可用性(Availability)。" },
+      { c: "1. 概述", t: "单选", q: "属于被动攻击的是( )。", o: ["A、中断", "B、截获", "C、篡改", "D、伪造"], a: "B", e: "截获属于被动攻击（如搭线窃听），只获取信息而不修改内容；中断、篡改、伪造属于主动攻击。" },
+      { c: "1. 概述", t: "单选", q: "下列攻击中，主要针对可用性的攻击是( )。", o: ["A、中断", "B、截获", "C、篡改", "D、伪造"], a: "A", e: "中断攻击（如DoS）破坏了系统的可用性，使用户无法正常使用服务。" },
+      { c: "1. 概述", t: "单选", q: "下列攻击中，主要针对机密性的攻击是( )。", o: ["A、中断", "B、截获", "C、篡改", "D、伪造"], a: "B", e: "截获攻击获取了未授权的信息，破坏了数据的机密性。" },
+      { c: "1. 概述", t: "单选", q: "信息在传送过程中，如果接收方接收到的信息与发送方发送的信息不同，则信息的( )遭到了破坏。", o: ["A、可用性", "B、不可否认性", "C、完整性", "D、机密性"], a: "C", e: "信息被修改或损坏，说明其完整性遭到了破坏。" },
+      { c: "1. 概述", t: "单选", q: "信息在传送过程中，通信量分析破坏了信息的( )。", o: ["A、可用性", "B、不可否认性", "C、完整性", "D、机密性"], a: "D", e: "通信量分析属于被动攻击，试图通过分析通信模式来推测出有价值的信息，破坏了机密性。" },
+
+      // --- 2. 渗透测试 ---
+      { c: "2. 渗透测试", t: "单选", q: "渗透测试的主要目的是什么?", o: ["A、破坏系统", "B、评估安全性", "C、增加系统负载", "D、自动化测试"], a: "B", e: "渗透测试旨在评估系统的安全性，发现潜在漏洞并提供修复建议。" },
+      { c: "2. 渗透测试", t: "单选", q: "哪种渗透测试类型涉及到对系统的未授权访问?", o: ["A、白盒测试", "B、黑盒测试", "C、灰盒测试", "D、玻璃盒测试"], a: "B", e: "黑盒测试通常模拟外部黑客在没有系统内部信息和授权凭证的情况下进行探测。" },
+      { c: "2. 渗透测试", t: "单选", q: "以下哪项不属于渗透测试的步骤?", o: ["A、信息收集", "B、漏洞分析", "C、系统维护", "D、利用漏洞"], a: "C", e: "系统维护属于运维工作，不属于渗透测试的阶段。" },
+      { c: "2. 渗透测试", t: "单选", q: "渗透测试中，哪个阶段是获取目标系统信息的过程?", o: ["A、信息收集", "B、漏洞分析", "C、漏洞利用", "D、报告撰写"], a: "A", e: "信息收集是第一步，尽最大可能获取目标系统的相关信息。" },
+      { c: "2. 渗透测试", t: "判断", q: "渗透测试可以不经授权进行。", o: ["√", "×"], a: "×", e: "渗透测试必须经过授权和合法许可，否则属于违法黑客行为。" },
+      { c: "2. 渗透测试", t: "判断", q: "渗透测试者在测试过程中可以修改或删除数据。", o: ["√", "×"], a: "×", e: "渗透测试采用可控制、非破坏性质的方法，不能恶意修改或删除数据。" },
+      { c: "2. 渗透测试", t: "判断", q: "渗透测试的目的是发现并利用系统漏洞。", o: ["√", "×"], a: "×", e: "目的是评估安全性、发现漏洞并提供修复建议，而不仅仅是为了利用漏洞（利用只是验证手段）。" },
+      { c: "2. 渗透测试", t: "判断", q: "渗透测试报告应该包含测试者对发现的安全问题的分析和建议。", o: ["√", "×"], a: "√", e: "报告需记录问题影响并给出修补升级方案。" },
+      { c: "2. 渗透测试", t: "判断", q: "渗透测试者在测试结束后应该清理所有测试痕迹。", o: ["√", "×"], a: "√", e: "为了不影响业务和留下安全隐患，测试结束后需清理痕迹（如测试账号、后门文件等）。" },
+      { c: "2. 渗透测试", t: "简答", q: "请描述PTES（渗透测试执行标准）定义的渗透测试的一般流程。(渗透测试有哪几个步骤?每个步骤的任务是什么?)", a: "（1）前期交互：与客户沟通，确定范围、目标、限制并签合同。\n（2）情报收集：使用公开资源获取目标相关信息。\n（3）威胁建模：利用信息标识漏洞缺陷，进行攻击规划。\n（4）漏洞分析：发现可被利用的缺陷。\n（5）渗透利用/漏洞攻击：利用漏洞入侵系统，获取访问权。\n（6）后渗透/深度利用：拿到权限后的后续操作（权限维持、内网渗透）。\n（7）书面报告：向客户提交包含问题、影响及修复方案的报告。", e: "掌握PTES七大步骤核心内容。" },
+      { c: "2. 渗透测试", t: "简答", q: "什么是渗透测试？渗透测试与网络攻击有什么区别？", a: "定义：是通过模拟恶意黑客的攻击方法，来评估计算机网络系统安全的一种评估方法。\n区别：\n（1）授权性：渗透测试是经过授权和合法许可的；网络攻击是未经授权的。\n（2）性质：渗透测试采用可控制、非破坏性的方法；网络攻击具有恶意目的和破坏性。\n（3）目的：渗透测试旨在评估安全、发现漏洞并提供建议；网络攻击旨在窃取数据、破坏系统。", e: "核心在于授权与破坏性的区别。" },
+
+      // --- 3. 信息收集 ---
+      { c: "3. 信息收集", t: "单选", q: "以下哪个命令可以用于扫描目标IP 地址所在的段()?", o: ["A、nmap 192.168.1.0/24", "B、nmap 192.168.1.1-100", "C、nmap 192.168.1.1-254 -p 80", "D、nmap 192.168.1.1"], a: "A", e: "192.168.1.0/24 表示整个C段网络。" },
+      { c: "3. 信息收集", t: "单选", q: "以下哪个命令可以用于扫描目标系统并检测是否存在漏洞()?", o: ["A、nmap -sS target_ip", "B、nmap --script vuln target_ip", "C、nmap -sV target_ip", "D、nmap -O target_ip"], a: "B", e: "--script vuln 调用了nmap的漏洞扫描脚本库。" },
+      { c: "3. 信息收集", t: "单选", q: "使用Whois查询可以获取以下哪些信息()?", o: ["A、域名注册人信息", "B、目标系统的漏洞", "C、目标系统的操作系统", "D、目标系统的开放端口"], a: "A", e: "Whois用于查询域名的IP及所有人、注册商等基本信息。" },
+      { c: "3. 信息收集", t: "单选", q: "使用Google hacking搜索时，以下哪个操作符可以用于查找特定文件类型( )?", o: ["A、site:", "B、filetype:", "C、intitle:", "D、inurl:"], a: "B", e: "filetype: 用于指定搜索的文件格式，如 filetype:pdf。" },
+      { c: "3. 信息收集", t: "单选", q: "以下哪个选项可以用于检测目标系统的操作系统？", o: ["A、-sV", "B、-O", "C、-A", "D、-p"], a: "B", e: "-O 参数在nmap中用于启用操作系统探测。" },
+      { c: "3. 信息收集", t: "单选", q: "以下哪个选项可以用于执行 Ping 扫描(仅检测主机是否在线)()?", o: ["A、-sT", "B、-sS", "C、-sP", "D、-sU"], a: "C", e: "-sP (或较新版本的 -sn) 用于Ping扫描，不进行端口扫描。" },
+      { c: "3. 信息收集", t: "单选", q: "以下哪项不是信息收集阶段的任务()?", o: ["A、获取目标系统的管理员密码", "B、收集目标系统的IP地址", "C、确定目标系统使用的操作系统", "D、识别目标系统上的开放端口"], a: "A", e: "获取管理员密码属于渗透利用阶段，不属于前期的信息收集。" },
+      { c: "3. 信息收集", t: "单选", q: "C段扫描的主要目的是什么( )?", o: ["A、枚举目标域名的子域名", "B、获取目标主机的操作系统信息", "C、发现同一网段中的其他潜在目标", "D、检测目标网站的漏洞"], a: "C", e: "C段扫描是为了发现与目标主机在同一网段（1-254）的其他可能防护薄弱的机器。" },
+      { c: "3. 信息收集", t: "单选", q: "以下哪种方法属于主动信息收集( )?", o: ["A、使用Shodan搜索", "B、查询Whois信息", "C、使用Nmap进行端口扫描", "D、使用Google hacking搜索"], a: "C", e: "主动收集会与目标系统产生直接交互（如Nmap发包），留下日志；其他选项均为利用第三方平台的被动收集。" },
+      { c: "3. 信息收集", t: "单选", q: "以下哪种方法可以用于绕过CDN获取目标网站的真实IP()?", o: ["A、使用Nmap扫描", "B、使用Wireshark捕获流量", "C、查询历史DNS记录", "D、使用Wappalyzer浏览器插件"], a: "C", e: "CDN通常是后来接入的，通过查询历史DNS解析记录，有可能找到接入CDN之前的真实服务器IP。" },
+      { c: "3. 信息收集", t: "单选", q: "以下哪种工具可以用于搜索网络空间资产( )?", o: ["A、Nmap扫描工具", "B、Google hacking搜索", "C、fofa搜索引擎", "D、Whois查询"], a: "C", e: "fofa、Shodan、ZoomEye 都是知名的网络空间资产搜索引擎。" },
+      { c: "3. 信息收集", t: "单选", q: "以下哪项不是常见的社会工程学手段()?", o: ["A、物理入侵", "B、钓鱼邮件", "C、网络钓鱼", "D、电话诈骗"], a: "A", e: "物理入侵属于物理安全范畴，社会工程学主要利用人性的弱点（如贪婪、恐惧、好奇心）进行欺骗。" },
+      { c: "3. 信息收集", t: "单选", q: "Nmap 的主要功能是什么()?", o: ["A、密码破解", "B、网络流量分析", "C、漏洞利用", "D、网络扫描"], a: "D", e: "Nmap 是一款开源的网络探测和安全审核（端口扫描）工具。" },
+      { c: "3. 信息收集", t: "判断", q: "信息收集是网络攻击的第一步，目的是尽可能多地获取目标系统的相关信息。", o: ["√", "×"], a: "√", e: "知己知彼百战不殆，信息收集是渗透测试/网络攻击的基础。" },
+      { c: "3. 信息收集", t: "判断", q: "社交媒体是信息收集的有效来源，可以获取目标组织的员工信息和内部动态。", o: ["√", "×"], a: "√", e: "社交媒体常泄露公司组织架构、员工邮箱甚至技术栈信息。" },
+      { c: "3. 信息收集", t: "判断", q: "信息收集阶段获取的信息越多，渗透测试的成功率越高。", o: ["√", "×"], a: "√", e: "掌握的信息越全面，可供利用的攻击面就越广。" },
+      { c: "3. 信息收集", t: "判断", q: "信息收集阶段不需要记录和整理获取的信息，直接进入漏洞扫描即可。", o: ["√", "×"], a: "×", e: "必须对信息进行系统整理和威胁建模，盲目扫描效率低且容易被封锁。" },
+      { c: "3. 信息收集", t: "判断", q: "信息收集阶段不需要关注目标系统的物理安全措施。", o: ["√", "×"], a: "×", e: "在全面的安全评估中，物理安全（如机房门禁等）也是信息收集的一部分。" },
+      { c: "3. 信息收集", t: "判断", q: "被动信息收集是指通过直接与目标系统交互来获取信息。", o: ["√", "×"], a: "×", e: "被动收集是不与目标系统直接交互，利用第三方资源获取信息。主动收集才直接交互。" },
+      { c: "3. 信息收集", t: "判断", q: "使用公开工具(如Nmap)进行信息收集是合法的，无需获得目标系统的授权。", o: ["√", "×"], a: "×", e: "未经授权对他人系统进行主动扫描（如Nmap探测端口）同样可能违反法律法规。" },
+
+      // --- 4. 弱口令爆破 ---
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪种行为可能违反《网络安全法》?", o: ["A、在授权测试中对系统密码进行爆破", "B、未经许可扫描他人服务器开放端口", "C、使用强密码保护个人账户", "D、报告发现的系统漏洞"], a: "B", e: "未经许可的扫描行为属于违法探测。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "弱密码爆破攻击的主要原理是什么?", o: ["A、通过社会工程学获取密码", "B、通过尝试大量可能的密码组合来破解账户", "C、通过嗅探网络流量获取密码", "D、通过漏洞利用直接获取密码"], a: "B", e: "爆破（穷举）就是利用计算机不断尝试字典中的组合。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪种密码属于弱密码?", o: ["A、Admin@123", "B、qwertyuiop", "C、1qaz2wsx", "D、以上都是"], a: "D", e: "这些都是常见的弱口令或键盘规律字符，极易在字典中被覆盖。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪个密码最容易被爆破攻击破解?", o: ["A、P@ssw0rd!2023", "B、123456", "C、7gH$2pLm", "D、MyD0gName!"], a: "B", e: "123456 是世界上最常见、最容易被穷举出来的弱密码。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下个种密码最安全?", o: ["A、123456789", "B、password", "C、Tr0ub4dor&3", "D、iloveyou"], a: "C", e: "C选项混合了大小写字母、数字和特殊字符，长度也足够，且不易猜测。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪种密码策略是不安全的?", o: ["A、密码长度至少为12位", "B、密码中包含用户名", "C、密码中包含特殊字符", "D、密码定期更换"], a: "B", e: "密码包含用户名极易被攻击者通过变量拼接猜出。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪个不是弱密码的常见特征?", o: ["A、长度较短，例如小于8位", "B、使用复杂的随机字符组合", "C、包含常见的单词或短语", "D、与个人信息相关，如生日、姓名"], a: "B", e: "复杂的随机字符组合是强密码的特征。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪种方法可以有效防御弱密码爆破攻击?", o: ["A、使用简单的密码", "B、启用账户锁定机制(如多次失败尝试后锁定账户)", "C、使用相同的密码登录多个系统", "D、将密码设置为用户名"], a: "B", e: "账户锁定机制可以极大增加爆破的时间成本，使爆破工具失效。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪种密码策略可以有效降低密码爆破攻击的成功率?", o: ["A、允许用户使用常见词汇作为密码", "B、强制要求密码长度至少为8位，并包含大小写字母、数字和特殊字符", "C、允许密码与用户名相同", "D、不限制密码尝试次数"], a: "B", e: "增加密码的复杂度和长度可以呈指数级增加爆破难度。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪种行为会增加弱密码爆破攻击的成功率?", o: ["A、使用长且复杂的密码", "B、使用多因素认证", "C、使用默认密码或常见密码", "D、定期更换密码"], a: "C", e: "默认密码（如admin/admin）通常排在黑客字典的前几行。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪种工具可以用于弱密码爆破攻击?", o: ["A、Wireshark", "B、Nmap", "C、Medusa", "D、google hacking"], a: "C", e: "Medusa(美杜莎)和Hydra(九头蛇)是著名的网络登录服务密码爆破工具。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "在进行弱密码爆破时，以下哪种工具通常不用于网站登录页面的密码爆破?", o: ["A、Hydra", "B、Nmap", "C、Burp Suite", "D、Medusa"], a: "B", e: "Nmap主要用于网络扫描探测，不直接用于密码爆破；Burp Suite的Intruder模块常用于Web爆破。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "在弱密码爆破攻击中，以下对字典文件的描述哪一项是正确的?", o: ["A、存储目标系统的漏洞信息", "B、存储常见的用户名和密码", "C、存储网络流量数据", "D、存储加密算法"], a: "B", e: "字典文件(Dictionary)就是一个包含了大量潜在密码和用户名的文本文件。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "在密码攻击中，以下哪种方法属于密码爆破?", o: ["A、利用已知漏洞获取密码", "B、通过社交工程学骗取密码", "C、使用暴力破解方法尝试所有可能的密码组合", "D、通过窃听网络通信截获密码"], a: "C", e: "密码爆破即暴力破解(Brute-force)，通过尝试所有组合寻找正确密码。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "以下哪种攻击方式通常与弱密码爆破结合使用?", o: ["A、社会工程学攻击", "B、中间人攻击", "C、DDoS攻击", "D、零日漏洞攻击"], a: "A", e: "攻击者常通过社工收集目标生日、姓名等信息，生成定向字典再进行爆破。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "Medusa是一款主要用于什么目的的工具?", o: ["A、网络扫描", "B、弱密码爆破", "C、漏洞利用", "D、数据包嗅探"], a: "B", e: "Medusa 是一款快速、支持并行的网络服务密码登录爆破工具。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "Medusa支持以下哪种协议进行密码爆破?", o: ["A、HTTP", "B、SSH", "C、FTP", "D、以上都支持"], a: "D", e: "Medusa 支持众多服务协议模块的爆破。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "在Medusa中，以下哪个参数用于指定模块(服务类型)?", o: ["A、-m", "B、-M", "C、-s", "D、-S"], a: "B", e: "用于指定模块(如 -M ssh)。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "在Medusa中，以下哪个参数用于指定单个密码?", o: ["A、-p", "B、-P", "C、-d", "D、-D"], a: "A", e: "小写 -p 指定单个密码，大写 -P 指定密码文件（字典）。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "在Medusa中，以下哪个参数用于指定密码字典文件?", o: ["A、-P", "B、-p", "C、-d", "D、-D"], a: "A", e: "大写 -P 用于指定包含多个密码的字典文件路径。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "在Medusa中，以下哪个参数用于指定目标IP地址?", o: ["A、-t", "B、-h", "C、-i", "D、-H"], a: "B", e: "-h (host) 用于指定单个目标IP地址。" },
+      { c: "4. 弱口令爆破", t: "单选", q: "在网络攻防实验中，要对一个Windows系统的远程桌面服务(RDP)进行弱密码爆破，通常会使用到以下哪个端口?", o: ["A、21", "B、22", "C、3389", "D、80"], a: "C", e: "Windows的RDP（远程桌面）默认端口是3389。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "弱密码爆破的速度只取决于密码的长度。( )", o: ["√", "×"], a: "×", e: "速度还取决于目标响应时间、网络带宽、并发线程数、锁定策略等。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "密码爆破攻击的速度只取决于攻击者的计算能力。( )", o: ["√", "×"], a: "×", e: "在线爆破受限于网络延迟和目标服务器防御，离线爆破才更依赖算力。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "定期更换密码可以降低弱密码被爆破的风险。( )", o: ["√", "×"], a: "√", e: "让攻击者没有足够时间破解密码。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "监控系统的登录日志可以及时发现弱密码爆破行为。( )", o: ["√", "×"], a: "√", e: "日志中大量且密集的登录失败记录是爆破的典型特征。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "密码爆破是一种通过逐个尝试密码来找出正确密码的攻击方法。", o: ["√", "×"], a: "√", e: "这就是暴力破解的基本定义。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "提高密码的复杂性可以有效防范密码爆破攻击。", o: ["√", "×"], a: "√", e: "增加了穷举空间的大小。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "使用验证码可以完全防止密码爆破攻击。", o: ["√", "×"], a: "×", e: "不能“完全”防止，验证码可能被绕过或被光学字符识别(OCR)/打码平台破解。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "限制登录次数可以增加密码爆破的时间成本，从而降低密码被爆破的风险。", o: ["√", "×"], a: "√", e: "防爆破最有效的机制之一。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "密码爆破攻击通常不需要考虑目标系统的身份验证手段。", o: ["√", "×"], a: "×", e: "必须考虑，如是否有多因子验证(MFA)、验证码、加密方式等。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "使用强密码是防御密码爆破攻击的有效方法之一。", o: ["√", "×"], a: "√", e: "强密码使得爆破所需时间延长至不可接受的程度。" },
+      { c: "4. 弱口令爆破", t: "判断", q: "密码爆破攻击通常需要目标系统的交互，因此容易被检测到。", o: ["√", "×"], a: "√", e: "在线爆破产生大量请求交互，极易被防火墙/日志监测发现。" },
+
+      // --- 5. SQL注入 ---
+      { c: "5. SQL注入", t: "单选", q: "盲注的核心原理是什么?", o: ["A、通过页面响应或时间延迟判断条件真假", "B、注入恶意代码到数据库", "C、直接修改数据库内容", "D、利用UNION操作符合并查询"], a: "A", e: "盲注在无明显回显时，通过页面布尔状态变化或响应时间差推断数据。" },
+      { c: "5. SQL注入", t: "单选", q: "报错注入的核心原理是什么?", o: ["A、注入恶意代码到数据库", "B、通过触发数据库错误回显，从错误信息中提取数据", "C、直接修改数据库内容", "D、利用时间延迟判断条件真假"], a: "B", e: "利用特定的函数(如extractvalue)引发故意报错，让数据库将查询结果显示在错误信息中返回。" },
+      { c: "5. SQL注入", t: "单选", q: "以下哪种SQL函数常用于报错注入?", o: ["A、GROUP_CONCAT()", "B、EXTRACTVALUE()", "C、SUM()", "D、COUNT()"], a: "B", e: "EXTRACTVALUE()和UPDATEXML()是MySQL经典的报错注入函数。" },
+      { c: "5. SQL注入", t: "单选", q: "布尔盲注通常根据什么判断条件真假?", o: ["A、网页标题变化", "B、页面响应时间", "C、页面内容变化(如“登录成功”或“用户名不存在”)", "D、数据库错误回显"], a: "C", e: "布尔盲注依赖页面呈现出的True或False两种不同状态的内容进行推断。" },
+      { c: "5. SQL注入", t: "单选", q: "以下关于报错注入和盲注的说法正确的是( )。", o: ["A、盲注比报错注入更难被发现，因为盲注不会产生任何数据库错误", "B、报错注入能直接在页面上看到错误信息获取数据，盲注不能直接看到结果", "C、报错注入和盲注都能直接在页面上看到注入结果", "D、报错注入只能获取数据库的表结构信息，盲注只能获取数据内容"], a: "B", e: "报错注入有错误回显暴露数据；盲注无直接回显，需逐字符猜解。" },
+      { c: "5. SQL注入", t: "单选", q: "以下哪种输入可能导致SQL注入?", o: ["A、admin' --", "B、123456", "C、test@example.com", "D、admin"], a: "A", e: "单引号闭合了原有查询字符串，-- 注释掉了后续正常查询语句。" },
+      { c: "5. SQL注入", t: "单选", q: "SQL注入攻击的主要目的是什么?", o: ["A、绕过身份验证", "B、获取数据库中的敏感数据", "C、破坏数据库的结构", "D、以上都是"], a: "D", e: "SQL注入能够执行任何SQL支持的操作，包括增删改查和越权绕过。" },
+      { c: "5. SQL注入", t: "单选", q: "以下哪种数据库错误信息可能被用于报错注入?", o: ["A、主键冲突错误", "B、语法错误", "C、数据类型不匹配错误", "D、以上都是"], a: "D", e: "只要能将查询结果带入并显示在错误抛出信息中，都可以被利用。" },
+      { c: "5. SQL注入", t: "单选", q: "盲注的两种主要类型是什么?", o: ["A、报错盲注和联合盲注", "B、基于错误的盲注和基于时间的盲注", "C、布尔盲注和时间盲注", "D、直接盲注和间接盲注"], a: "C", e: "布尔型（页面内容变化）和时间型（响应延迟时间变化）。" },
+      { c: "5. SQL注入", t: "单选", q: "以下哪种攻击方式属于SQL注入?", o: ["A、通过恶意文件上传获取服务器权限", "B、窃取用户的Cookie", "C、发送大量请求导致服务器崩溃", "D、在输入框中输入恶意SQL代码"], a: "D", e: "利用输入框未过滤导致SQL指令被带入数据库执行。" },
+      { c: "5. SQL注入", t: "单选", q: "联合注入中，使用以下那种方法可以确定原查询的列数?", o: ["A、使用EXP()函数", "B、使用SLEEP()函数", "C、使用SUBSTRING()函数", "D、使用ORDER BY递增数字直至报错"], a: "D", e: "ORDER BY 用于排序指定列数，超出实际列数时会报错，借此可测出字段数。" },
+      { c: "5. SQL注入", t: "单选", q: "以下哪种符号常用于SQL注入攻击中?", o: ["A、#(注释符号)", "B、'(单引号)", "C、以上都是", "D、--(注释符号)"], a: "C", e: "单引号用于闭合，# 和 -- 用于注释。" },
+      { c: "5. SQL注入", t: "单选", q: "报错注入适用于以下哪种场景?", o: ["A、需要盲猜数据", "B、页面无回显，但数据库报错信息可见", "C、仅能通过响应状态码判断", "D、页面有完整回显，可直接显示查询结果"], a: "B", e: "应用程序开启了错误提示且未过滤错误信息。" },
+      { c: "5. SQL注入", t: "单选", q: "时间盲注中，以下哪个语句可能用于制造延迟?", o: ["A、AND SLEEP(5)", "B、ORDER BY 3", "C、SUBSTRING((SELECT password),1,1)='a'", "D、UNION SELECT @@version"], a: "A", e: "SLEEP() 函数可让数据库查询暂停指定秒数。" },
+      { c: "5. SQL注入", t: "单选", q: "联合注入的核心原理是什么?", o: ["A、通过UNION操作符合并攻击者的查询与原查询", "B、注入恶意代码到数据库", "C、直接修改数据库内容", "D、利用时间延迟判断条件真假"], a: "A", e: "UNION 能够将额外的一条SELECT查询结果合并到原有查询结果中一同返回。" },
+      { c: "5. SQL注入", t: "判断", q: "联合注入需要原查询有回显，且攻击者需知道原查询的列数。", o: ["√", "×"], a: "√", e: "必须列数一致且类型兼容，UNION结果才能正确附加并回显。" },
+      { c: "5. SQL注入", t: "判断", q: "自动化工具(如sqlmap)能检测所有SQL注入漏洞。", o: ["√", "×"], a: "×", e: "复杂的二次注入或特殊的WAF拦截环境，自动化工具可能失效，需要人工分析。" },
+      { c: "5. SQL注入", t: "判断", q: "SQL 注入攻击只能获取数据库中的数据，不能对数据库进行修改或删除操作。( )", o: ["√", "×"], a: "×", e: "SQL注入同样可以执行UPDATE、DELETE甚至DROP TABLE等高危操作。" },
+      { c: "5. SQL注入", t: "判断", q: "SQL注入攻击只能通过数字型输入字段实现。", o: ["√", "×"], a: "×", e: "字符型、搜索型等一切用户可控输入点都可能存在SQL注入。" },
+      { c: "5. SQL注入", t: "判断", q: "对数据库的错误信息进行屏蔽可以在一定程度上防止 SQL 注入攻击者获取更多信息。( )", o: ["√", "×"], a: "√", e: "关闭错误回显能有效防御报错注入，但仍需防范盲注。" },
+
+      // --- 6. 文件上传 ---
+      { c: "6. 文件上传", t: "单选", q: "文件上传漏洞产生的主要原因是( )。", o: ["A、服务器配置过高", "B、对上传文件的类型、大小和内容没有进行严格的验证和过滤", "C、客户端浏览器版本过低", "D、网络带宽不足"], a: "B", e: "根本原因是对用户上传的内容信任度过高且未做限制校验。" },
+      { c: "6. 文件上传", t: "单选", q: "文件上传漏洞可能导致的后果不包括以下哪一项?( )", o: ["A、网站被挂马", "B、服务器被植入后门", "C、用户密码被破解", "D、敏感信息被泄露"], a: "C", e: "上传漏洞直接导致服务器控制权丧失或挂马，不会直接“破解”用户密码（除非拿到数据库后再破解）。" },
+      { c: "6. 文件上传", t: "单选", q: "以下哪种方法可以有效防止文件上传漏洞?", o: ["A、允许用户上传任意文件类型", "B、对上传文件的扩展名进行严格检查", "C、不限制上传文件的大小", "D、不对上传文件进行任何验证"], a: "B", e: "白名单扩展名检查是防御上传漏洞的基础有效手段。" },
+      { c: "6. 文件上传", t: "单选", q: "以下哪种攻击方式属于文件上传漏洞的利用?", o: ["A、上传Web Shell", "B、发送大量请求导致服务器崩溃", "C、窃取用户的Cookie", "D、伪造用户身份执行数据库操作"], a: "A", e: "Web Shell（网页木马）是上传漏洞最核心的利用载体。" },
+      { c: "6. 文件上传", t: "单选", q: "Web Shell 的主要作用是什么?", o: ["A、窃取用户数据", "B、获取服务器权限", "C、破坏数据库", "D、绕过身份验证"], a: "B", e: "提供一个类似于系统命令行的Web接口，以获取和维持服务器权限。" },
+      { c: "6. 文件上传", t: "单选", q: "以下哪种文件类型通常被用作 Web Shell?", o: ["A、图片文件(如.jpg、.png)", "B、文本文件(如.txt)", "C、脚本文件(如.php、.jsp)", "D、压缩文件(如.zip)"], a: "C", e: "Web Shell需要服务器后端解析执行，因此常是.php、.jsp、.asp等脚本格式。" },
+      { c: "6. 文件上传", t: "单选", q: "以下哪个关键词在Webshell文件中最常见?", o: ["A、<?php @eval($_POST['cmd']); ?>", "B、SELECT * FROM users", "C、<script>alert('XSS')<\/script>", "D、UNION SELECT"], a: "A", e: "这是最经典PHP一句话木马，核心在于使用eval等危险函数执行任意代码。" },
+      { c: "6. 文件上传", t: "单选", q: "以下哪段代码是典型的“一句话木马”?", o: ["A、<?php eval($_GET['cmd']); ?>", "B、<script>alert('XSS')<\/script>", "C、SELECT * FROM users WHERE id=1", "D、<?php phpinfo(); ?>"], a: "A", e: "短小精悍，通过GET或POST接收外部参数并执行系统或语言层面命令。" },
+      { c: "6. 文件上传", t: "单选", q: "大马(Big Horse)的主要特点是什么?", o: ["A、功能简单，代码量少", "B、功能强大，支持文件管理、数据库操作等", "C、仅用于窃取用户数据", "D、仅用于绕过身份验证"], a: "B", e: "大马体积大，拥有完整的UI界面，包含文件管理、提权、数据库连接等综合功能。" },
+      { c: "6. 文件上传", t: "单选", q: "以下哪种Web Shell功能最强大?", o: ["A、大马", "B、小马", "C、一句话木马", "D、以上都是"], a: "A", e: "大马集成了非常丰富的功能组件。" },
+      { c: "6. 文件上传", t: "单选", q: "以下关于大马、小马和一句话木马的说法，正确的是( )。", o: ["A、大马功能简单，小马功能强大", "B、一句话木马体积大，大马体积小", "C、大马通常具有较为完善的文件管理、数据库管理等功能，而小马相对功能简单，一句话木马则更为简洁，通常只包含一个简单的代码语句用于建立连接", "D、小马和一句话木马是同一种类型的木马，只是名称不同"], a: "C", e: "C项准确描述了三种常见木马的体积和功能定位。" },
+      { c: "6. 文件上传", t: "单选", q: "小马与大马相比，其优势在于( )。", o: ["A、更容易被检测到", "B、功能更强大", "C、体积小，隐蔽性好，可能更容易绕过一些安全防护机制", "D、可以在任何操作系统上运行"], a: "C", e: "小马体积很小，经常用于作为大马的上传“跳板”，隐蔽性强。" },
+      { c: "6. 文件上传", t: "判断", q: "文件上传漏洞是指攻击者通过上传恶意文件来获取服务器权限。", o: ["√", "×"], a: "√", e: "这是上传漏洞最直接的目的。" },
+      { c: "6. 文件上传", t: "判断", q: "大马(Big Horse)是一种功能简单的Web Shell，代码量较少。", o: ["√", "×"], a: "×", e: "大马功能复杂、代码量大；一句话木马才是代码极少。" },
+      { c: "6. 文件上传", t: "判断", q: "一句话木马(One-Liner Web Shell)通常只有一行代码，功能简单。", o: ["√", "×"], a: "√", e: "其主要功能仅仅是执行外部传入的指令。" },
+      { c: "6. 文件上传", t: "判断", q: "文件上传漏洞只能通过上传图片文件来利用。", o: ["√", "×"], a: "×", e: "可直接上传执行脚本文件；即使是图片，也可能通过包含漏洞或解析漏洞结合利用。" },
+      { c: "6. 文件上传", t: "判断", q: "大马通常用于文件管理和数据库操作。", o: ["√", "×"], a: "√", e: "大马提供了完整的管理面板功能。" },
+      { c: "6. 文件上传", t: "判断", q: "文件上传漏洞的防御措施包括对上传文件的扩展名进行严格检查。", o: ["√", "×"], a: "√", e: "白名单检验拓展名是十分必要的防御手段。" },
+      { c: "6. 文件上传", t: "判断", q: "文件上传漏洞只能导致文件被上传到服务器，不会引发其他安全问题。( )", o: ["√", "×"], a: "×", e: "上传的如果是木马，会被执行从而引发服务器彻底沦陷等极大问题。" },
+      { c: "6. 文件上传", t: "判断", q: "小马的功能比大马弱，所以小马对服务器的危害也比大马小。( )", o: ["√", "×"], a: "×", e: "小马虽然本身功能少，但它是获取系统权限或上传大马的跳板，危害同样致命。" },
+
+      // --- 7. XSS漏洞 ---
+      { c: "7. XSS漏洞", t: "单选", q: "XSS 漏洞的本质是: (单选题)", o: ["A、攻击者直接获取服务器 root 权限", "B、数据库被注入恶意 SQL 语句", "C、上传恶意文件到服务器", "D、服务器未对用户输入进行过滤，导致恶意脚本在受害者浏览器执行"], a: "D", e: "XSS是跨站脚本攻击，核心是由于未转义在前端浏览器层面执行恶意脚本。" },
+      { c: "7. XSS漏洞", t: "单选", q: "以下哪种XSS攻击类型通常用于钓鱼攻击或诱导用户点击恶意链接? (单选题)", o: ["A、以上都不是", "B、反射型XSS", "C、存储型XSS", "D、DOM型XSS"], a: "B", e: "反射型XSS需要诱骗受害者主动点击包含Payload的专属恶意链接才能触发。" },
+      { c: "7. XSS漏洞", t: "单选", q: "一位用户在留言板提交包含恶意脚本的留言，后续其他用户查看该留言板时，恶意脚本自动执行。这属于哪种 XSS 攻击: (单选题)", o: ["A、反射型 XSS", "B、DOM-based XSS", "C、存储型 XSS", "D、以上都不是"], a: "C", e: "Payload被存储在服务器数据库中，所有访问页面的用户均中招，是存储型XSS。" },
+      { c: "7. XSS漏洞", t: "单选", q: "以下哪种场景可能存在XSS? (单选题)", o: ["A、服务器未启用HTTPS", "B、用户密码明文存储", "C、搜索框输入 <script>alert(1)<\/script> 后页面弹窗", "D、数据库未备份"], a: "C", e: "弹窗成功说明输入框未对特殊字符转义，存在典型的XSS缺陷。" },
+      { c: "7. XSS漏洞", t: "单选", q: "攻击者构造一个链接 http://example.com/search?keyword=<script>alert('XSS')<\/script>，当用户点击该链接，搜索引擎结果页面弹出警示框。这属于: (单选题)", o: ["A、反射型 XSS", "B、基于 Flash 的 XSS", "C、DOM-based XSS", "D、存储型 XSS"], a: "A", e: "攻击代码在URL参数中被带入服务端，并直接反射渲染回前端，属于反射型。" },
+      { c: "7. XSS漏洞", t: "单选", q: "网站安全人员在检查日志时，发现大量包含 <script> 标签的用户请求，最有可能发生了什么: (单选题)", o: ["A、服务器遭受 DDoS 攻击", "B、发生了 XSS 攻击尝试", "C、用户在正常测试 JavaScript 代码", "D、网站 JavaScript 功能出现故障"], a: "B", e: "<script> 标签是XSS注入中最常见的测试探测载荷。" },
+      { c: "7. XSS漏洞", t: "单选", q: "反射型 XSS 和存储型 XSS 的主要区别是? (单选题)", o: ["A、反射型仅影响移动端，存储型影响 PC 端", "B、反射型需要用户交互(如点击链接)，存储型无需交互", "C、反射型必须使用 POST 请求", "D、存储型只能通过 SQL 注入触发"], a: "B", e: "反射型通常由用户点击链接触发；存储型在用户访问正常页面浏览内容时自动触发。" },
+      { c: "7. XSS漏洞", t: "单选", q: "以下哪种是存储型 XSS (Persistent XSS) 的特点? (单选题)", o: ["A、恶意脚本仅存在于 URL 中，需用户点击触发", "B、仅影响当前会话，刷新后失效", "C、必须通过社工手段诱骗用户执行", "D、恶意脚本存储在服务器(如数据库)，每次访问页面时触发"], a: "D", e: "持久化存储在服务端是存储型（持久型）XSS的最显著特征。" },
+      { c: "7. XSS漏洞", t: "单选", q: "以下哪种XSS攻击类型具有持久性和广泛传播性? (单选题)", o: ["A、反射型XSS", "B、存储型XSS", "C、DOM型XSS", "D、以上都不是"], a: "B", e: "存储型XSS无需每次构造特殊链接，任何访问受污染页面的人都会受攻击，危害范围最广。" },
+      { c: "7. XSS漏洞", t: "判断", q: "XSS 攻击的主要目的是破坏服务器端的数据库。( )", o: ["√", "×"], a: "×", e: "主要在用户端浏览器执行恶意脚本，用于窃取Cookie、挂马或钓鱼等前端操作。" },
+      { c: "7. XSS漏洞", t: "判断", q: "存储型XSS的Payload会永久保存在目标服务器的数据库中。", o: ["√", "×"], a: "√", e: "Payload被写入数据库或文件中持久化存储。" },
+      { c: "7. XSS漏洞", t: "判断", q: "攻击者可以利用 XSS 漏洞在用户浏览器中执行任意 JavaScript 代码。( )", o: ["√", "×"], a: "√", e: "XSS本质就是JS代码执行漏洞。" },
+      { c: "7. XSS漏洞", t: "判断", q: "渗透测试人员在测试网站时，发现页面源代码中存在未对用户输入进行处理的地方，就一定存在 XSS 漏洞。( )", o: ["√", "×"], a: "×", e: "虽然未过滤，但可能因为内容并未在页面中输出或渲染执行，就不一定能利用成功。" },
+      { c: "7. XSS漏洞", t: "判断", q: "DOM型XSS的Payload会发送到服务器端处理。(✓/×)", o: ["√", "×"], a: "×", e: "DOM型XSS纯粹在前端由JavaScript获取如Location等信息并直接修改DOM，不经过服务端回显处理。" },
+      { c: "7. XSS漏洞", t: "判断", q: "在一个网站的搜索框输入 <script>alert('XSS')<\/script>，搜索结果页面弹出警示框，这是存储型 XSS 攻击的表现。( )", o: ["√", "×"], a: "×", e: "这是经典的反射型 XSS。" },
+      { c: "7. XSS漏洞", t: "判断", q: "反射型XSS通常需要用户主动点击恶意链接才能触发。(✓/×)", o: ["√", "×"], a: "√", e: "恶意脚本在URL上，必须借助社工手段让受害者点击。" },
+      { c: "7. XSS漏洞", t: "判断", q: "存储型XSS攻击不需要服务器端参与，直接在客户端浏览器上执行。", o: ["√", "×"], a: "×", e: "存储型XSS必须经过服务器端接收、存储并再次随页面分发给受害者。" },
+      { c: "7. XSS漏洞", t: "判断", q: "输入验证和过滤是防御XSS攻击的有效措施。", o: ["√", "×"], a: "√", e: "转义特殊HTML字符(实体编码)和严格的内容验证是防御XSS的核心。" },
+      { c: "7. XSS漏洞", t: "判断", q: "XSS攻击只能窃取用户的Cookie信息，不能执行其他恶意操作。", o: ["√", "×"], a: "×", e: "通过JS能做的XSS几乎都能做，如劫持网页、暗刷流量、获取剪贴板等。" },
+      { c: "7. XSS漏洞", t: "判断", q: "DOM型XSS攻击不经过服务器，直接在客户端浏览器上执行。", o: ["√", "×"], a: "√", e: "依靠浏览器本地DOM操作引发的缺陷。" }
+    ];
+
+    function App() {
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [userAnswers, setUserAnswers] = useState({});
+      const [shortAnswerText, setShortAnswerText] = useState({});
+      const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+      const currentQ = questionsData[currentIndex];
+      
+      const isAnswered = userAnswers[currentIndex] !== undefined;
+      const isCorrect = isAnswered && userAnswers[currentIndex] === currentQ.a;
+
+      const stats = useMemo(() => {
+        let correct = 0, wrong = 0, answered = 0;
+        Object.entries(userAnswers).forEach(([indexStr, answer]) => {
+          const idx = parseInt(indexStr, 10);
+          const q = questionsData[idx];
+          answered++;
+          if (q.t !== '简答') {
+            if (answer === q.a) correct++;
+            else wrong++;
+          } else {
+            if (answer === '掌握') correct++;
+            else if (answer === '需复习') wrong++;
+          }
+        });
+        const objectiveTotal = questionsData.filter(q => q.t !== '简答').length;
+        const accuracy = objectiveTotal > 0 ? (correct / (correct + wrong || 1)) * 100 : 0;
+        return { correct, wrong, answered, total: questionsData.length, accuracy: accuracy.toFixed(1) };
+      }, [userAnswers]);
+
+      const handleOptionSelect = (optionLabel) => {
+        if (isAnswered && currentQ.t !== '简答') return;
+        setUserAnswers(prev => ({ ...prev, [currentIndex]: optionLabel }));
+      };
+
+      const nextQuestion = () => { if (currentIndex < questionsData.length - 1) setCurrentIndex(c => c + 1); };
+      const prevQuestion = () => { if (currentIndex > 0) setCurrentIndex(c => c - 1); };
+      const goToQuestion = (idx) => { setCurrentIndex(idx); setIsSidebarOpen(false); };
+
+      const mainContentRef = useRef(null);
+      useEffect(() => {
+        if (mainContentRef.current) mainContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }, [currentIndex]);
+
+      const groupedQuestions = useMemo(() => {
+        const groups = {};
+        questionsData.forEach((q, idx) => {
+          if (!groups[q.c]) groups[q.c] = [];
+          groups[q.c].push({ ...q, originalIndex: idx });
+        });
+        return groups;
+      }, []);
+
+      return (
+        <div className="flex h-full w-full">
+          {/* 手机端顶部 */}
+          <div className="lg:hidden fixed top-0 w-full bg-white shadow-sm z-20 flex justify-between items-center p-4">
+            <h1 className="font-bold text-indigo-600 text-lg">安全实战题库</h1>
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+              <IconMenu />
+            </button>
+          </div>
+
+          {/* 遮罩 */}
+          {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
+          
+          {/* 侧边栏 */}
+          <aside className={`fixed lg:static top-0 right-0 h-full w-80 bg-white border-l border-slate-200 shadow-xl z-40 transform transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'} lg:order-last`}>
+            <div className="p-5 border-b flex justify-between items-center">
+              <h2 className="font-bold text-xl flex items-center gap-2 text-indigo-700">
+                <IconBarChart /> 答题统计
+              </h2>
+              <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-1 text-slate-400 hover:text-slate-600">
+                <IconX />
+              </button>
+            </div>
+            
+            <div className="p-5 flex-shrink-0 flex flex-col gap-4">
+              <div className="bg-indigo-50 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-indigo-500 font-medium">正确率</p>
+                  <p className="text-3xl font-bold text-indigo-700">{stats.accuracy}%</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-500">进度</p>
+                  <p className="text-lg font-semibold text-slate-700">{stats.answered} / {stats.total}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 text-sm text-center">
+                <div className="flex-1 bg-green-100 text-green-700 py-2 rounded-lg font-medium">{stats.correct} 正确</div>
+                <div className="flex-1 bg-red-100 text-red-700 py-2 rounded-lg font-medium">{stats.wrong} 错误</div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 pt-0">
+              <h3 className="font-medium text-slate-500 mb-3 text-sm">答题卡</h3>
+              {Object.entries(groupedQuestions).map(([category, qs]) => (
+                <div key={category} className="mb-6">
+                  <div className="text-xs font-semibold text-slate-400 mb-2 truncate">{category}</div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {qs.map((q) => {
+                      const idx = q.originalIndex;
+                      const answered = userAnswers[idx] !== undefined;
+                      let bgClass = "bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-200";
+                      
+                      if (answered) {
+                        if (q.t === '简答') bgClass = userAnswers[idx] === '掌握' ? "bg-green-500 text-white" : "bg-orange-400 text-white";
+                        else bgClass = userAnswers[idx] === q.a ? "bg-green-500 text-white" : "bg-red-500 text-white";
+                      }
+                      
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => goToQuestion(idx)}
+                          className={`h-10 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center ${currentIndex === idx ? 'ring-2 ring-offset-2 ring-indigo-500' : ''} ${bgClass}`}
+                        >
+                          {idx + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          {/* 主区 */}
+          <main className="flex-1 flex flex-col h-full relative w-full pt-16 lg:pt-0" ref={mainContentRef}>
+            <div className="hidden lg:flex px-8 py-5 border-b bg-white items-center justify-between">
+              <h1 className="text-2xl font-bold text-indigo-900 tracking-tight">网络安全实战测试库</h1>
+              <div className="text-sm text-slate-500 bg-slate-100 px-4 py-1.5 rounded-full font-medium">
+                类别：{currentQ.c}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 lg:p-8">
+              <div className="max-w-4xl mx-auto w-full">
+                <div className="mb-6 flex items-center justify-between">
+                  <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-md text-sm font-bold shadow-sm">{currentQ.t}题</span>
+                  <span className="text-slate-400 font-medium">题目 {currentIndex + 1} / {questionsData.length}</span>
+                </div>
+
+                <h2 className="text-xl lg:text-2xl font-semibold leading-relaxed mb-8 text-slate-800 break-words">{currentQ.q}</h2>
+
+                <div className="space-y-4">
+                  {currentQ.t === '简答' ? (
+                    <div className="flex flex-col gap-4">
+                      <textarea 
+                        className="w-full h-32 p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none transition-all outline-none"
+                        placeholder="请在此输入你的思考和答案..."
+                        value={shortAnswerText[currentIndex] || ''}
+                        onChange={(e) => setShortAnswerText({...shortAnswerText, [currentIndex]: e.target.value})}
+                        disabled={isAnswered}
+                      />
+                      {!isAnswered ? (
+                        <button onClick={() => handleOptionSelect('查看了答案')} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors shadow-md self-start">
+                          提交并核对答案
+                        </button>
+                      ) : (
+                        <div className="flex flex-wrap gap-4 items-center">
+                           <span className="text-sm font-medium text-slate-500">自评掌握程度：</span>
+                           <button onClick={() => handleOptionSelect('掌握')} className={`px-4 py-2 rounded-lg font-medium transition ${userAnswers[currentIndex] === '掌握' ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>完全掌握</button>
+                           <button onClick={() => handleOptionSelect('需复习')} className={`px-4 py-2 rounded-lg font-medium transition ${userAnswers[currentIndex] === '需复习' ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>还需复习</button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    currentQ.o && currentQ.o.map((opt, i) => {
+                      const optValue = currentQ.t === '单选' ? opt.charAt(0) : opt;
+                      const isSelected = userAnswers[currentIndex] === optValue;
+                      let optionClass = "bg-white border-2 border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50";
+                      
+                      if (isAnswered) {
+                        const isCorrectOpt = optValue === currentQ.a;
+                        if (isCorrectOpt) optionClass = "bg-green-50 border-2 border-green-500 text-green-800";
+                        else if (isSelected) optionClass = "bg-red-50 border-2 border-red-500 text-red-800";
+                        else optionClass = "bg-slate-50 border-2 border-slate-200 text-slate-400 opacity-60";
+                      } else if (isSelected) {
+                         optionClass = "bg-indigo-50 border-2 border-indigo-500 text-indigo-800";
+                      }
+
+                      return (
+                        <button key={i} disabled={isAnswered} onClick={() => handleOptionSelect(optValue)} className={`w-full text-left p-4 lg:p-5 rounded-xl font-medium transition-all duration-200 flex items-center justify-between group ${optionClass}`}>
+                          <span className="break-words mr-4">{opt}</span>
+                          {isAnswered && optValue === currentQ.a && <IconCheckCircle className="text-green-500 shrink-0" />}
+                          {isAnswered && isSelected && optValue !== currentQ.a && <IconXCircle className="text-red-500 shrink-0" />}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* 丝滑展现解析区 */}
+                <div className={`mt-8 overflow-hidden transition-all duration-500 ease-in-out rounded-2xl ${isAnswered ? 'max-h-[800px] opacity-100 ring-1 ring-slate-200 shadow-sm' : 'max-h-0 opacity-0'}`}>
+                  <div className="bg-white p-6 md:p-8">
+                    <div className="flex items-start gap-3 mb-4">
+                       <div className={`p-2 rounded-full mt-1 ${isCorrect || currentQ.t === '简答' ? 'bg-green-100' : 'bg-red-100'}`}>
+                         {isCorrect || currentQ.t === '简答' ? <IconCheckCircle className="text-green-600" /> : <IconXCircle className="text-red-600" />}
+                       </div>
+                       <div>
+                          <h3 className={`text-xl font-bold ${isCorrect || currentQ.t === '简答' ? 'text-green-600' : 'text-red-600'}`}>
+                            {currentQ.t === '简答' ? '参考答案与解析' : (isCorrect ? '回答正确！' : `回答错误。正确答案是 ${currentQ.a}`)}
+                          </h3>
+                       </div>
+                    </div>
+                    
+                    {currentQ.t === '简答' && (
+                      <div className="mb-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                         <p className="text-sm font-semibold text-slate-500 mb-2">标准答案：</p>
+                         <p className="text-slate-800 whitespace-pre-wrap leading-relaxed">{currentQ.a}</p>
+                      </div>
+                    )}
+                    
+                    <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                      <div className="flex items-center gap-2 mb-2 text-indigo-800 font-semibold">
+                        <IconHelpCircle /> 解析说明
+                      </div>
+                      <p className="text-indigo-900/80 leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                        {currentQ.e || '本题暂无详细解析。'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div className="bg-white border-t px-4 py-4 lg:px-8 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+              <button onClick={prevQuestion} disabled={currentIndex === 0} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${currentIndex === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+                <IconChevronLeft /> 上一题
+              </button>
+              
+              <div className="hidden md:block text-sm font-medium text-slate-400">
+                （答题后，下方自动滑出解析）
+              </div>
+
+              <button onClick={nextQuestion} disabled={currentIndex === questionsData.length - 1} className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all shadow-sm ${currentIndex === questionsData.length - 1 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md'}`}>
+                下一题 <IconChevronRight />
+              </button>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
